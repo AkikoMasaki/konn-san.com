@@ -33,6 +33,7 @@ import qualified Hakyll
 import           Instances
 import           Language.Haskell.TH             (litE, runIO, stringL)
 import           MathConv
+import           MyTeXMathConv
 import           Network.HTTP.Types
 import           Network.URI                     hiding (query)
 import           Prelude                         hiding (FilePath, div, mapM,
@@ -86,13 +87,17 @@ globalBib :: FilePath
 globalBib = home </> "Library/texmf/bibtex/bib/myreference.bib"
 
 mathToSvg0 (Math DisplayMath src) =
-  Image [Str src] ("http://konn-san.com/tex/tex.svg?"
+  Span ("", ["math-display"], []) [
+  Image (readTeXMath src) ("http://konn-san.com/tex/tex.svg?"
                   ++ BS.unpack (renderQuery False [("mode", Just "display")
                                                   ,("tex", Just $ " " <> BS.pack src)]), "")
+  ]
 mathToSvg0 (Math InlineMath src) =
-  Image [Str src] ("http://konn-san.com/tex/tex.svg?"
+  Span ("", ["math-inline"], []) [
+  Image (readTeXMath src)  ("http://konn-san.com/tex/tex.svg?"
                   ++ BS.unpack (renderQuery False [ ("mode", Just "inline")
                                                   , ("tex", Just $ " " <> BS.pack src)]), "")
+  ]
 mathToSvg0 inl = inl
 
 mathToSvg = topDown mathToSvg0

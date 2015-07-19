@@ -225,3 +225,22 @@ h3:before {
 .label{
     font-weight: bold;
 }
+
+.math-inline > img {
+    margin-top: -0.5ex;
+}
+
+.math-display {
+    display: block;
+    width: 100%;
+    text-align: center;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+.math-display > img {
+    align: middle;
+    display: inline-block;
+}
+
+
