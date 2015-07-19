@@ -60,15 +60,16 @@ import qualified Text.Pandoc.Builder             as Pan
 import           Text.Pandoc.Shared              (stringify)
 import           Text.Pandoc.Walk
 
-import           Control.Exception    (IOException, handle)
-import           Control.Lens         (imap)
-import qualified Data.ByteString.Lazy as LBS
-import           Data.Foldable        (asum)
-import qualified Data.HashMap.Strict  as HM
-import qualified Data.Yaml            as Y
+import           Control.Exception      (IOException, handle)
+import           Control.Lens           (imap)
+import qualified Data.ByteString.Lazy   as LBS
+import           Data.Foldable          (asum)
+import qualified Data.HashMap.Strict    as HM
+import qualified Data.Yaml              as Y
 import           Lenses
+import           Network.HTTP.Types.URI
 import           Settings
-import           System.Exit          (ExitCode (..))
+import           System.Exit            (ExitCode (..))
 
 default (T.Text)
 
@@ -83,6 +84,18 @@ home = $(litE . stringL . encodeString =<< runIO getHomeDirectory)
 
 globalBib :: FilePath
 globalBib = home </> "Library/texmf/bibtex/bib/myreference.bib"
+
+mathToSvg0 (Math DisplayMath src) =
+  Image [Str src] ("http://konn-san.com/tex/tex.svg?"
+                  ++ BS.unpack (renderQuery False [("mode", Just "display")
+                                                  ,("tex", Just $ " " <> BS.pack src)]), "")
+mathToSvg0 (Math InlineMath src) =
+  Image [Str src] ("http://konn-san.com/tex/tex.svg?"
+                  ++ BS.unpack (renderQuery False [ ("mode", Just "inline")
+                                                  , ("tex", Just $ " " <> BS.pack src)]), "")
+mathToSvg0 inl = inl
+
+mathToSvg = topDown mathToSvg0
 
 main :: IO ()
 main = hakyllWith config $ do
@@ -166,7 +179,7 @@ main = hakyllWith config $ do
       let bibs = maybe [] (\(BibTeX bs) -> bs) mbib ++ gbib
       ipandoc <- mapM (unsafeCompiler . texToMarkdown fp) =<< getResourceBody
       let ip' = fmap (myProcCites style bibs) ipandoc
-      conv'd <- mapM (return . addPDFLink ("/" </> replaceExtension fp "pdf") .
+      conv'd <- mapM (return . mathToSvg . addPDFLink ("/" </> replaceExtension fp "pdf") .
                       addAmazonAssociateLink "konn06-22"
                       <=< procSchemes) ip'
       let item = writePandocWith
@@ -325,7 +338,7 @@ myPandocCompiler =
   pandocCompilerWithTransformM
   def
   writerConf
-  (procSchemes >=> return . addAmazonAssociateLink "konn06-22")
+  (procSchemes >=> return . addAmazonAssociateLink "konn06-22" >=> return . mathToSvg)
 
 applyDefaultTemplate :: Item String -> Compiler (Item String)
 applyDefaultTemplate item = do
